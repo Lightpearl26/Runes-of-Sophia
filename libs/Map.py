@@ -111,3 +111,49 @@ class Tileset:
                     tile_graphics.append(graphics[tile_infos["file"]].subsurface(Rect(x, y, sizex, sizey)))
                 self.tiles.append(Tile(tile_infos["type"], tile_size, tile_infos["hitbox"], tile_graphics))
             file.close()
+            
+    def get_tile(self: Self, id: int) -> Tile:
+        return self.tiles[id]
+
+
+# Create Map object
+class Map:
+    """
+    Instance of a Map object
+    """
+    def __init__(self: Self, name: str) -> None:
+        self.name: str = name
+        self.size: list[int]
+        self.bgm: str
+        self.bgs: str
+        self.layer_id_range: list[int]
+        self.tileset: Tileset
+        self.tilemap: dict[int, list[list[Tile]]] = {}
+        
+        # Load map from json file
+        self.load_json()
+        
+    def load_json(self: Self) -> None:
+        with open(join(cts.map_folder, f"{self.name}.json"), "r") as file:
+            data = jsload(file)
+            self.size = data["size"]
+            self.bgm = data["bgm"]
+            self.bgs = data["bgs"]
+            self.layer_id_range = [data["layer_id_range"][0], data["layer_id_range"][1]+1]
+            self.tileset = Tileset(data["tileset"])
+            for layer in data["layers"]:
+                self.tilemap[layer["id"]] = [
+                    [
+                        self.tileset.get_tile(layer["tiles"][j][i]) for i in range(self.size[0])
+                    ] for j in range(self.size[1])
+                ]
+            file.close()
+            
+    def render_layers(self: Self, frame: int, player_pos: tuple[int, int]) -> dict[int, Surface]:
+        layers = {}
+        
+        # Generate The different layers
+        for layer_id in range(*self.layer_id_range):
+            surface = Surface(cts.size, cts.flags)
+        
+        return layers

@@ -7,7 +7,6 @@
 # Import built-in modules
 from typing import Self
 import pygame as pg
-import time
 
 # Initialize Pygame environment
 pg.init()
@@ -21,6 +20,7 @@ from libs import Event
 from libs import Sound
 from libs import Map
 from libs import Transition
+
 
 # Create Main GameEngine object
 class GameEngine:

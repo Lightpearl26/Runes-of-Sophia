@@ -10,6 +10,7 @@ from .constants import SCENE as cts
 from . import Map
 from .Transition import FadeIn, FadeOut
 
+
 # Create base object for all Scenes
 class BaseScene:
     """
@@ -29,6 +30,7 @@ class BaseScene:
     def render(self: Self) -> None:
         self.game_engine.screen.fill((255, 255, 255))
         self.game_engine.screen.blit(self.surface, (0, 0))
+ 
    
 # Create TitleScreen
 class TitleScreen(BaseScene):
@@ -40,8 +42,8 @@ class TitleScreen(BaseScene):
         BaseScene.__init__(self, game_engine)
         self.choices: list[str] = ["Nouvelle Partie", "Continuer", "Options", "Quitter"]
         self.scenes: list[str | None] = ["NewGame", "LoadGame", "Options", None]
-        self.title_font = font(None, 96)
-        self.text_font = font(None, 48)
+        self.title_font = font(None, 48)
+        self.text_font = font(None, 32)
         
         # Now we initialize changing attributes
         self.current_choice: int = 0
@@ -106,6 +108,7 @@ class TitleScreen(BaseScene):
 
         return modified_rects
 
+
 # Create Options scene
 class Options(BaseScene):
     """
@@ -127,6 +130,7 @@ class Options(BaseScene):
         self.surface.fill((0, 255, 255))
         return [Rect(0, 0, *cts.size)]
 
+
 # Create NewGame scene
 class NewGame(BaseScene):
     """
@@ -146,6 +150,7 @@ class NewGame(BaseScene):
             self.game_engine.change_scene("TitleScreen", reinit=False)
         self.surface.fill((255, 0, 255))
         return [Rect(0, 0, *cts.size)]
+
 
 # Create LoadGame Scene
 class LoadGame(BaseScene):
@@ -168,6 +173,8 @@ class LoadGame(BaseScene):
         self.surface.fill((255, 255, 0))
         return [Rect(0, 0, *cts.size)]
 
+
+# Create OverWorld Scene
 class OverWorld(BaseScene):
     """
     Instance of Overworld Scene

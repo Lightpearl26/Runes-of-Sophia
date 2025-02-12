@@ -6,14 +6,12 @@ from os.path import join
 
 # Create constants
 class SCREEN:
-    size: tuple[int, int]=(32*48, 18*48)
+    size: tuple[int, int]=(20*48, 11*48)
     flags: int = pgcts.FULLSCREEN | pgcts.SCALED
     max_fps: int = 60
     
-class SCENE:
-    size: tuple[int, int] = (32*48, 18*48)
+class SCENE(SCREEN):
     flags: int = pgcts.SRCALPHA
-    max_fps: int = 60
 
 class EVENTS:
     config_path: str = join("Data", "controls.json")
@@ -25,8 +23,7 @@ class EVENTS:
     default_move_right: list[int] = [pgcts.K_d, pgcts.K_RIGHT]
     default_events: list[str] = ["Action", "Cancel", "MoveUp", "MoveDown", "MoveLeft", "MoveRight", "Quit", "Pressed", "Release"]
 
-class MAP:
-    flags: int = pgcts.SRCALPHA
+class MAP(SCENE):
     map_folder: str = join("Data", "Maps")
     tileset_folder: str = join("Data", "Tilesets")
     tileset_graphics_folder: str = join("Assets", "Graphics", "Tilesets")
