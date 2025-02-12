@@ -23,7 +23,7 @@ BITMASKS_VARIANTS: dict[str, list[dict[str, tuple[int, int]]]] = {
         {"tl":(1, 1), "tr":(1, 2), "br":(0, 2), "bl":(0, 1)},
         {"tl":(0, 2), "tr":(0, 1), "br":(1, 1), "bl":(1, 2)},
         {"tl":(1, 0), "tr":(1, 0), "br":(1, 0), "bl":(1, 0)},
-        {"tl":(1, 2), "tr":(0, 2), "br":(1, 1), "bl":(0, 1)}
+        {"tl":(1, 2), "tr":(0, 2), "br":(0, 1), "bl":(1, 1)}
     ],
     "wall": [
         {"tl":(0, 0), "tr":(1, 0), "br":(1, 1), "bl":(0, 1)},
@@ -158,15 +158,18 @@ class Map:
     def get_neighborhood(self: Self, layer_id: int, tile_x: int, tile_y: int) -> list[int]:
         offsets = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)]
         neighborhood = []
-        tile = self.tilemap[layer_id][tile_x][tile_y]
+        tile = self.tilemap[layer_id][tile_y][tile_x]
         
         for i, (dx, dy) in enumerate(offsets):
             nx, ny = tile_x+dx, tile_y+dy
-            if 0 <= nx < self.size[0] and 0 <= ny <= self.size[1]:
-                neighbor = self.tilemap[layer_id][nx][ny]
+            if 0 <= nx < self.size[0] and 0 <= ny < self.size[1]:
+                neighbor = self.tilemap[layer_id][ny][nx]
+                if neighbor:
+                    neighborhood.append(int(neighbor.tile_id == tile.tile_id)) # type: ignore
+                else:
+                    neighborhood.append(0)
             else:
-                neighbor = None
-            neighborhood.append(int(not neighbor or (tile.tile_id == neighbor.tile_id))) # type: ignore
+                neighborhood.append(1)
         
         return neighborhood
             

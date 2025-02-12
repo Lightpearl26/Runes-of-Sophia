@@ -36,6 +36,7 @@ class GameEngine:
             "Options": Scene.Options(self),
             "NewGame": Scene.NewGame(self),
             "LoadGame": Scene.LoadGame(self),
+            "OverWorld":Scene.OverWorld(self)
         }
         self.event_manager: Event.EventManager = Event.EventManager()
         self.sound_manager: Sound.SoundManager = Sound.SoundManager()
@@ -93,5 +94,5 @@ class GameEngine:
 # Launching the game
 if __name__ == "__main__":
     game = GameEngine()
-    game.change_scene(new_scene="TitleScreen")
+    game.change_scene(new_scene="OverWorld")
     game.run()
