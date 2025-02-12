@@ -1,26 +1,28 @@
 #-*-coding:utf-8-*-
 
 # Import built-in modules
-from typing import Self
+from typing import Self, Any
 from pygame import Rect, Surface
 from pygame.font import SysFont as font
 
 # Import game components
 from .constants import SCENE as cts
+from . import Map
+from .Transition import FadeIn, FadeOut
 
 # Create base object for all Scenes
 class BaseScene:
     """
     Base instance of all scenes of the game
     """
-    def __init__(self: Self) -> None:
-        self.game_engine: None = None
+    def __init__(self: Self, game_engine: Any) -> None:
+        self.game_engine: Any = game_engine
         self.surface: Surface = Surface(cts.size, cts.flags)
         
     def reinit(self: Self) -> None:
         raise NotImplementedError
     
-    def update(self: Self) -> list[Rect]:
+    def update(self: Self) -> list[Rect] | None:
         if self.game_engine.event_manager.get_event("Quit"):
             self.game_engine.quit()
     
@@ -33,13 +35,13 @@ class TitleScreen(BaseScene):
     """
     TitleScreen of the game
     """
-    def __init__(self: Self) -> None:
+    def __init__(self: Self, game_engine: Any) -> None:
         # Here we initialize all unchanged attributes
-        BaseScene.__init__(self)
+        BaseScene.__init__(self, game_engine)
         self.choices: list[str] = ["Nouvelle Partie", "Continuer", "Options", "Quitter"]
         self.scenes: list[str | None] = ["NewGame", "LoadGame", "Options", None]
-        self.title_font = font(None, 64)
-        self.text_font = font(None, 32)
+        self.title_font = font(None, 96)
+        self.text_font = font(None, 48)
         
         # Now we initialize changing attributes
         self.current_choice: int = 0
@@ -71,7 +73,11 @@ class TitleScreen(BaseScene):
             self.current_choice = (self.current_choice + 1) % 4
         
         if self.game_engine.event_manager.get_event("Action") and not self.lock_cursor:
-            self.game_engine.change_scene(self.scenes[self.current_choice])
+            if not self.current_choice == 3:
+                transition = FadeOut(1000)
+                transition.play(self)
+            self.game_engine.change_scene(self.scenes[self.current_choice], enter_transition=FadeIn(1000))
+            return [Rect(0, 0, *cts.size)]
             
         # make changes to the surface and storing updated rects
         modified_rects: list[Rect] = []
@@ -83,12 +89,12 @@ class TitleScreen(BaseScene):
 
         for i, choice in enumerate(self.choices):
             if self.current_choice == i:
-                surf: Surface = Surface((cts.size[0]//2, 32), cts.flags)
+                surf: Surface = Surface((cts.size[0]//2, 48), cts.flags)
                 surf.fill((155, 255, 55))
-                surf_rect: Rect = Rect(cts.size[0]//4, cts.size[1]//2 + i*32, cts.size[0]//2, 32)
+                surf_rect: Rect = Rect(cts.size[0]//4, cts.size[1]//2 + i*48, cts.size[0]//2, 48)
                 blits.append((surf, surf_rect))
             txt: Surface = self.text_font.render(choice, True, (0, 0, 0))
-            txt_rect: Rect = txt.get_rect(center=(cts.size[0]//2, cts.size[1]//2 + 16 + i*32))
+            txt_rect: Rect = txt.get_rect(center=(cts.size[0]//2, cts.size[1]//2 + 24 + i*48))
             blits.append((txt, txt_rect))
 
         modified_rects.append(Rect(cts.size[0]//4, cts.size[1]//2, cts.size[0]//2, 128))
@@ -104,9 +110,12 @@ class TitleScreen(BaseScene):
 class Options(BaseScene):
     """
     Instance of Option scene
+    
+    This scene shows the options of the game
+    and give ability to user to change them
     """
-    def __init__(self: Self) -> None:
-        BaseScene.__init__(self)
+    def __init__(self: Self, game_engine: Any) -> None:
+        BaseScene.__init__(self, game_engine)
 
     def reinit(self: Self) -> None:
         pass
@@ -121,10 +130,12 @@ class Options(BaseScene):
 # Create NewGame scene
 class NewGame(BaseScene):
     """
-    Instance of Option scene
+    Instance of NewGame scene
+    
+    This scene trigger when the user wants to create a new save
     """
-    def __init__(self: Self) -> None:
-        BaseScene.__init__(self)
+    def __init__(self: Self, game_engine: Any) -> None:
+        BaseScene.__init__(self, game_engine)
 
     def reinit(self: Self) -> None:
         pass
@@ -139,10 +150,13 @@ class NewGame(BaseScene):
 # Create LoadGame Scene
 class LoadGame(BaseScene):
     """
-    Instance of Option scene
+    Instance of LoadGame scene
+    
+    This scene gives user possibility to choose a existing save
+    if no existing save is found, it create a new save
     """
-    def __init__(self: Self) -> None:
-        BaseScene.__init__(self)
+    def __init__(self: Self, game_engine: Any) -> None:
+        BaseScene.__init__(self, game_engine)
 
     def reinit(self: Self) -> None:
         pass
@@ -152,4 +166,21 @@ class LoadGame(BaseScene):
         if self.game_engine.event_manager.get_event("Cancel"):
             self.game_engine.change_scene("TitleScreen", reinit=False)
         self.surface.fill((255, 255, 0))
+        return [Rect(0, 0, *cts.size)]
+
+class OverWorld(BaseScene):
+    """
+    Instance of Overworld Scene
+    
+    Overworld is the scene where the player can walk
+    on map and interact with various entities
+    """
+    def __init__(self: Self, game_engine: Any) -> None:
+        BaseScene.__init__(self, game_engine)
+        
+    def reinit(self: Self) -> None:
+        self.game_engine.map_manager.reinit()
+    
+    def update(self: Self) -> list[Rect]:
+        BaseScene.update(self)
         return [Rect(0, 0, *cts.size)]

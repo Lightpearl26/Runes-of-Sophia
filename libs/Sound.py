@@ -11,9 +11,9 @@ class SoundManager:
     This object handle any music or soundeffect of our game
     """
     def __init__(self: Self) -> None:
-        self.current_music: dict[str, str] | None = None
-        self.next_music: dict[str, str] | None = None
-        self.music_phase: str | None = None
+        self.current_music: dict[str, str]  = {}
+        self.next_music: dict[str, str] = {}
+        self.music_phase: str = ""
         self.ask_music_end: bool = False
         self.sfx: dict[str, Sound] = {}
 
@@ -24,7 +24,7 @@ class SoundManager:
     def switch_to_next_music(self: Self) -> None:
         if self.next_music:
             self.current_music = self.next_music
-            self.next_music = None
+            self.next_music = {}
             self.play_header()
 
     def play_header(self: Self) -> None:
