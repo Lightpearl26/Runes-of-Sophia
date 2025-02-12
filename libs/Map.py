@@ -60,7 +60,8 @@ class Tile:
     """
     Instance of a Tile object
     """
-    def __init__(self: Self, type: str, size: int, hitbox: int, graphics: list[Surface]) -> None:
+    def __init__(self: Self, tile_id: int, type: str, size: int, hitbox: int, graphics: list[Surface]) -> None:
+        self.tile_id: int = tile_id
         self.type: str = type
         self.size = size
         self.hitbox: int = hitbox
@@ -79,7 +80,7 @@ class Tile:
             
             # Then we pick the right corner according to bitmask
             x, y = BITMASKS_VARIANTS[self.type][bitmask//2+int(bitmask==7)][corner]
-            corner_graphic = self.graphics[frame].subsurface(Rect(x*self.size+offsetx, y*self.size+offsety, self.size//2, self.size//2))
+            corner_graphic = self.graphics[frame%len(self.graphics)].subsurface(Rect(x*self.size+offsetx, y*self.size+offsety, self.size//2, self.size//2))
             
             # Then e blit it on our tile
             tile.blit(corner_graphic, (offsetx, offsety))
@@ -95,6 +96,7 @@ class Tileset:
     """
     def __init__(self: Self, name: str) -> None:
         self.name = name
+        self.tile_size: int = 0
         self.tiles: list[Tile] = []
         self.load_json()
         
@@ -102,18 +104,22 @@ class Tileset:
         with open(join(cts.tileset_folder, f"{self.name}.json"), "r") as file:
             data = jsload(file)
             tile_size = data["tile_size"]
+            self.tile_size = tile_size
             graphics = {filename: load(join(cts.tileset_graphics_folder, self.name, filename)).convert_alpha() for filename in data["files"]}
-            for tile_infos in data["tiles"]:
+            for i, tile_infos in enumerate(data["tiles"]):
                 tile_graphics = []
                 for frame in tile_infos["frames"]:
                     x, y = frame[0]*tile_size, frame[1]*tile_size
                     sizex, sizey = GRAPHICS_FORMATS[tile_infos["type"]][0]*tile_size, GRAPHICS_FORMATS[tile_infos["type"]][1]*tile_size
                     tile_graphics.append(graphics[tile_infos["file"]].subsurface(Rect(x, y, sizex, sizey)))
-                self.tiles.append(Tile(tile_infos["type"], tile_size, tile_infos["hitbox"], tile_graphics))
+                self.tiles.append(Tile(i, tile_infos["type"], tile_size, tile_infos["hitbox"], tile_graphics))
             file.close()
             
-    def get_tile(self: Self, id: int) -> Tile:
-        return self.tiles[id]
+    def get_tile(self: Self, id: int) -> Tile | None:
+        if id != -1:
+            return self.tiles[id]
+        else:
+            return None
 
 
 # Create Map object
@@ -128,7 +134,7 @@ class Map:
         self.bgs: str
         self.layer_id_range: list[int]
         self.tileset: Tileset
-        self.tilemap: dict[int, list[list[Tile]]] = {}
+        self.tilemap: dict[int, list[list[Tile | None]]] = {}
         
         # Load map from json file
         self.load_json()
@@ -148,12 +154,53 @@ class Map:
                     ] for j in range(self.size[1])
                 ]
             file.close()
+
+    def get_neighborhood(self: Self, layer_id: int, tile_x: int, tile_y: int) -> list[int]:
+        offsets = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)]
+        neighborhood = []
+        tile = self.tilemap[layer_id][tile_x][tile_y]
+        
+        for i, (dx, dy) in enumerate(offsets):
+            nx, ny = tile_x+dx, tile_y+dy
+            if 0 <= nx < self.size[0] and 0 <= ny <= self.size[1]:
+                neighbor = self.tilemap[layer_id][nx][ny]
+            else:
+                neighbor = None
+            neighborhood.append(int(not neighbor or (tile.tile_id == neighbor.tile_id))) # type: ignore
+        
+        return neighborhood
             
     def render_layers(self: Self, frame: int, player_pos: tuple[int, int]) -> dict[int, Surface]:
+        tiles_x = cts.size[0]//self.tileset.tile_size + 2
+        tiles_y = cts.size[1]//self.tileset.tile_size + 2
+        
+        camera_x = max(0, player_pos[0] - tiles_x // 2)
+        camera_y = max(0, player_pos[1] - tiles_y // 2)
+        
         layers = {}
         
         # Generate The different layers
         for layer_id in range(*self.layer_id_range):
-            surface = Surface(cts.size, cts.flags)
+            tiles = self.tilemap[layer_id]
+            
+            surface = Surface((tiles_x*self.tileset.tile_size, tiles_y*self.tileset.tile_size), cts.flags)
+            surface.fill((0, 0, 0, 0))
+            
+            for y in range(tiles_y):
+                for x in range(tiles_x):
+                    tile_x = camera_x + x
+                    tile_y = camera_y + y
+                    
+                    if 0 <= tile_y < len(tiles) and 0 <= tile_x < len(tiles[tile_y]):
+                        tile_obj = tiles[tile_y][tile_x]
+                        
+                        if tile_obj:
+                            neighborhood = self.get_neighborhood(layer_id, tile_x, tile_y)
+                            tile_graphic = tile_obj.get_tile(neighborhood, frame)
+                            
+                            screen_pos = (x*self.tileset.tile_size, y*self.tileset.tile_size)
+                            surface.blit(tile_graphic, screen_pos)
+                            
+            layers[layer_id] = surface
         
         return layers
