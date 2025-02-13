@@ -184,7 +184,7 @@ class OverWorld(BaseScene):
     """
     def __init__(self: Self, game_engine: Any) -> None:
         BaseScene.__init__(self, game_engine)
-        self.map = Map.Map("tests")
+        self.map = Map.Map("village")
         self.frame = 0
         
     def reinit(self: Self) -> None:
@@ -194,7 +194,7 @@ class OverWorld(BaseScene):
         BaseScene.update(self)
         self.surface.fill((0, 0, 0, 0))
         
-        layers = self.map.render_layers(self.frame, (0, 0))
+        layers = self.map.render_layers((0, 0))
         
         for layer_id in range(*self.map.layer_id_range):
             self.surface.blit(layers[layer_id], (0, 0))

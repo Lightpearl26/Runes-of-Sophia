@@ -5,6 +5,7 @@ from typing import Self, Any
 from os.path import join
 from json import load as jsload
 from pygame.image import load
+from pygame.time import get_ticks
 from pygame import Surface, Rect
 
 # Import game components
@@ -30,14 +31,14 @@ BITMASKS_VARIANTS: dict[str, list[dict[str, tuple[int, int]]]] = {
         {"tl":(1, 0), "tr":(1, 1), "br":(0, 1), "bl":(0, 0)},
         {"tl":(0, 1), "tr":(0, 0), "br":(1, 0), "bl":(1, 1)},
         {"tl":(1, 1), "tr":(0, 1), "br":(1, 0), "bl":(0, 0)},
-        {"tl":(1, 1), "tr":(0, 1), "br":(1, 0), "bl":(0, 0)}
+        {"tl":(1, 1), "tr":(0, 1), "br":(0, 0), "bl":(1, 0)}
     ],
     "fall": [
-        {"tl":(0, 0), "tr":(0, 1), "br":(0, 1), "bl":(0, 0)},
-        {"tl":(0, 1), "tr":(0, 1), "br":(0, 0), "bl":(0, 0)},
-        {"tl":(0, 0), "tr":(0, 0), "br":(0, 1), "bl":(0, 1)},
-        {"tl":(0, 1), "tr":(0, 0), "br":(0, 0), "bl":(0, 1)},
-        {"tl":(0, 1), "tr":(0, 0), "br":(0, 0), "bl":(0, 1)}
+        {"tl":(0, 0), "tr":(1, 0), "br":(1, 0), "bl":(0, 0)},
+        {"tl":(1, 0), "tr":(1, 0), "br":(0, 0), "bl":(0, 0)},
+        {"tl":(0, 0), "tr":(0, 0), "br":(1, 0), "bl":(1, 0)},
+        {"tl":(1, 0), "tr":(0, 0), "br":(0, 0), "bl":(1, 0)},
+        {"tl":(1, 0), "tr":(0, 0), "br":(0, 0), "bl":(1, 0)}
     ],
     "unique": [
         {"tl":(0, 0), "tr":(0, 0), "br":(0, 0), "bl":(0, 0)},
@@ -60,15 +61,23 @@ class Tile:
     """
     Instance of a Tile object
     """
-    def __init__(self: Self, tile_id: int, type: str, size: int, hitbox: int, graphics: list[Surface]) -> None:
+    def __init__(self: Self, tile_id: int, type: str, size: int, hitbox: int, graphics: list[Surface], animation_delay: int=333) -> None:
         self.tile_id: int = tile_id
         self.type: str = type
         self.size = size
         self.hitbox: int = hitbox
+        self.animation_delay = animation_delay
+        self.current_frame = 0
+        self.last_tick_update = 0
         self.graphics: list[Surface] = graphics
     
-    def get_tile(self: Self, neighborhood: list[int], frame: int) -> Surface:
+    def get_tile(self: Self, neighborhood: list[int]) -> Surface:
         tile = Surface((self.size, self.size), cts.flags)
+        
+        tick = get_ticks()
+        if tick - self.last_tick_update > self.animation_delay:
+            self.last_tick_update = tick
+            self.current_frame = (self.current_frame + 1) % len(self.graphics)
         
         # Pick correct graphics according to parameters
         for i, corner in enumerate(["tl", "tr", "bl", "br"]):
@@ -80,7 +89,7 @@ class Tile:
             
             # Then we pick the right corner according to bitmask
             x, y = BITMASKS_VARIANTS[self.type][bitmask//2+int(bitmask==7)][corner]
-            corner_graphic = self.graphics[frame%len(self.graphics)].subsurface(Rect(x*self.size+offsetx, y*self.size+offsety, self.size//2, self.size//2))
+            corner_graphic = self.graphics[self.current_frame].subsurface(Rect(x*self.size+offsetx, y*self.size+offsety, self.size//2, self.size//2))
             
             # Then e blit it on our tile
             tile.blit(corner_graphic, (offsetx, offsety))
@@ -145,7 +154,7 @@ class Map:
             self.size = data["size"]
             self.bgm = data["bgm"]
             self.bgs = data["bgs"]
-            self.layer_id_range = [data["layer_id_range"][0], data["layer_id_range"][1]+1]
+            self.layer_id_range = data["layer_id_range"]
             self.tileset = Tileset(data["tileset"])
             for layer in data["layers"]:
                 self.tilemap[layer["id"]] = [
@@ -173,7 +182,7 @@ class Map:
         
         return neighborhood
             
-    def render_layers(self: Self, frame: int, player_pos: tuple[int, int]) -> dict[int, Surface]:
+    def render_layers(self: Self, player_pos: tuple[int, int]) -> dict[int, Surface]:
         tiles_x = cts.size[0]//self.tileset.tile_size + 2
         tiles_y = cts.size[1]//self.tileset.tile_size + 2
         
@@ -199,7 +208,7 @@ class Map:
                         
                         if tile_obj:
                             neighborhood = self.get_neighborhood(layer_id, tile_x, tile_y)
-                            tile_graphic = tile_obj.get_tile(neighborhood, frame)
+                            tile_graphic = tile_obj.get_tile(neighborhood)
                             
                             screen_pos = (x*self.tileset.tile_size, y*self.tileset.tile_size)
                             surface.blit(tile_graphic, screen_pos)
